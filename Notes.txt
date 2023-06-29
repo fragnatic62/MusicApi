@@ -1,0 +1,118 @@
+ORM Notes:
+
+* Install Microsoft.EntityFrameworkCore.Tools
+* Open PackageManager Console
+* Run (Add-Migration {Migration Name}) to create a migration file
+* Run (update-database) to update the database base on the current migration file
+
+Migration Notes to seed data:
+
+* Create a (Data) folder
+* Add a function (protected override void OnModelCreating(ModelBuilder modelBuilder))
+* Inside the fucntion add this (modelBuilder.Entity<Song>().HasData(<ListOfData>))
+* Open PackageManager Console
+* Run (Add-Migration {Migration Name}) to create a migration file
+* Run (update-database) to update the database base on the current migration file
+
+
+//
+using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MusicApi.Data;
+using MusicApi.Helpers;
+using MusicApi.Models;
+
+// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+
+namespace MusicApi.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class SongsController : ControllerBase
+    {
+        private ApiDbContext _db;
+        public SongsController(ApiDbContext apiDbContext)
+        {
+            _db = apiDbContext;
+            
+        }
+        // GET: api/<SongsController>
+        [HttpGet]
+        public async Task<IActionResult> Get()
+        {
+            return Ok(await _db.Songs.ToListAsync());
+        }
+
+        // GET api/<SongsController>/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(int id)
+        {
+            var song = await _db.Songs.FindAsync(id);
+            if (song == null)
+            {
+                return NotFound("No record found on id "+id.ToString());
+            }
+            else
+            {
+                return Ok(song);
+            }
+        }
+
+        // GET api/<SongsController>/Test/5
+        [HttpGet("[action]/{id}")]
+        public int Test(int id)
+        {
+            return id;
+        }
+
+        // POST api/<SongsController>
+        [HttpPost]
+        public async Task<IActionResult> Post([FromForm] Song song)
+        {
+            var imageUrl = await FileHelper.UploadImage(song.Image);
+            song.ImageUrl = imageUrl;
+            await _db.Songs.AddAsync(song);
+            await _db.SaveChangesAsync();
+            return StatusCode(StatusCodes.Status201Created);
+        }
+
+        // PUT api/<SongsController>/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromBody] Song songObj)
+        {
+            var song = await _db.Songs.FindAsync(id);
+            if (song == null)
+            {
+                return NotFound("No record found");
+            }
+            else
+            {
+                song.Title = songObj.Title;
+                song.Language = songObj.Language;
+                song.Duration = songObj.Duration;
+                await _db.SaveChangesAsync();
+                return Ok("Record Updated Succesfully");
+            }
+
+        }
+
+        // DELETE api/<SongsController>/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var song = await _db.Songs.FindAsync(id);
+            if(song == null)
+            {
+                return NotFound("No record found");
+            }
+            else
+            {
+                _db.Songs.Remove(song);
+                await _db.SaveChangesAsync();
+                return Ok("Record Deleted");
+            }
+
+        }
+    }
+}
